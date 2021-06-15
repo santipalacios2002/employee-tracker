@@ -31,89 +31,97 @@ const whatToDo = [
         type: 'list',
         name: 'whatToDo',
         message: "What would you like to do?",
-        choices: ['View All Employees', 'View All Employees by Department', 'View All Employees by Manager', 'Add Employee', 'Remove Employee', 'Update Employee Role', 'Update Employee Manager', 'View all Roles'],
+        choices: ['View All Employees', 'View All Employees by Department', 'View All Employees by Manager', 'Add Employee', 'Remove Employee', 'Update Employee Role', 'Update Employee Manager', 'View all Roles', 'I\'m done'],
     }
 ];
 
-inquirer.prompt(whatToDo).then(answer => {
+const start = () => {
+    inquirer.prompt(whatToDo).then(answer => {
     if (answer.whatToDo === 'View All Employees') {
-        connection.query(
-            "select e.id, CONCAT(e.first_name, ' ', e.last_name) AS Employee, role.title AS Title,  department.name AS Department, role.salary AS Salary, CONCAT(m.first_name, ' ', m.last_name) AS Manager FROM employee e LEFT JOIN employee m ON  m.id = e.manager_id join role on e.role_id = role.id JOIN department ON department.id = role.department_id",
-            (err, results) => {
-                if (err) throw err;
-                console.table(results);
-            }
-        )
-        connection.end();
-
+        allEmployeeQuery(); 
+    } else if (answer.whatToDo === 'View All Employees by Department') {
+    console.log('View All Employees by Department')
+        ask();
+    }  else if (answer.whatToDo === 'View All Employees by Manager') {
+    console.log('View All Employees by Manager:')
+    ask();
+    } else if (answer.whatToDo === 'Add Employee') {
+    console.log('Add Employee:')
+    ask();
+    } else if (answer.whatToDo === 'Remove Employee') {
+    console.log('Remove Employee:')
+    ask();
+    } else if (answer.whatToDo === 'Update Employee Role') {
+    console.log('Update Employee Role:')
+    ask();
+    } else if (answer.whatToDo === 'Update Employee Manager') {
+    console.log('Update Employee Manager:')
+    ask();
+    } else if (answer.whatToDo === 'View all Roles') {
+        allRoleQuery();
+    console.log('View all Roles:')
     }
-
 })
-
-
-// const otherTable = [{
-//     id: 1,
-//     Employee: 'Ashley Rodriguez',
-//     Title: 'Lead Engineer',
-//     Department: 'Engineering',
-//     Salary: 150000,
-//     Manager: null
-//   },
-//   {
-//     id: 2,
-//     Employee: 'John Doe',
-//     Title: 'Sales Lead',
-//     Department: 'Sales',
-//     Salary: 100000,
-//     Manager: 'Ashley Rodriguez'
-//   },
-//   {
-//     id: 3,
-//     Employee: 'Mike Chan',
-//     Title: 'Sales Person',
-//     Department: 'Sales',
-//     Salary: 80000,
-//     Manager: 'John Doe'
-//   },
-//   {
-//     id: 4,
-//     Employee: 'Kevin Tupik',
-//     Title: 'Software Engineer',
-//     Department: 'Engineering',
-//     Salary: 70000,
-//     Manager: 'Ashley Rodriguez'
-//   },
-//   {
-//     id: 5,
-//     Employee: 'Malia Brown',
-//     Title: 'Accountant',
-//     Department: 'Finance',
-//     Salary: 125000,
-//     Manager: null
-//   },
-//   {
-//     id: 6,
-//     Employee: 'Sarah Lourd',
-//     Title: 'Legal Team Lead',
-//     Department: 'Legal',
-//     Salary: 250000,
-//     Manager: null
-//   },
-//   {
-//     id: 7,
-//     Employee: 'Tom Allen',
-//     Title: 'Lawyer',
-//     Department: 'Legal',
-//     Salary: 190000,
-//     Manager: 'Sarah Lourd'
-//   }
-
-//User this sql statement for all employees: 
-// select e.id, CONCAT(e.first_name, ' ', e.last_name) AS Employee, role.title AS Title,  department.name AS Department, role.salary AS Salary, CONCAT(m.first_name, ' ', m.last_name) AS Manager
-// FROM employee e
-// LEFT JOIN employee m ON  m.id = e.manager_id join role on e.role_id = role.id JOIN department ON department.id = role.department_id
+}
 
 
 
+const allEmployeeQuery = () => {
+    connection.query(
+        `SELECT 
+            e.id,
+            CONCAT(e.first_name, ' ', e.last_name) AS Employee,
+            role.title AS Title,
+            department.name AS Department,
+            role.salary AS Salary,
+            CONCAT(m.first_name, ' ', m.last_name) AS Manager
+        FROM
+            employee e
+                LEFT JOIN
+            employee m ON m.id = e.manager_id
+                JOIN
+            role ON e.role_id = role.id
+                JOIN
+            department ON department.id = role.department_id`,
+        (err, results) => {
+            if (err) throw err;
+            console.table(results);
+            ask();
+        }
+    )
+}
+
+const allRoleQuery = () => {
+    connection.query(
+        `SELECT 
+            role.id, title AS role
+         FROM
+            role`,
+        (err, results) => {
+            if (err) throw err;
+            console.table(results);
+            ask()
+        }
+    )
+
+}
+
+
+
+
+const ask = () => {
+    inquirer.prompt([{
+        type: 'confirm',
+        name: 'askAgain',
+        message: 'Would you like to do something else?',
+        default: true,
+    }]).then((answer) => {
+        if (answer.askAgain) start();
+        else connection.end();
+    });
+}
+
+
+start();
 
 
