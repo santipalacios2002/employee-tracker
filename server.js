@@ -45,7 +45,7 @@ const start = () => {
                 allEmpByDept();
                 break;
             case 'View All Employees by Manager':
-                console.log('View All Employees by Manager:')
+                allEmpByMgr();
                 break;
             case 'Add Employee':
                 console.log('Add Employee:')
@@ -124,6 +124,41 @@ const allEmpByDept = () => {
         });
 }
 
+//View employees by manager
+const allEmpByMgr = () => {
+    //
+    const query = "SELECT DISTINCT( CONCAT(m.first_name, ' ', m.last_name) ) AS manager FROM employee e JOIN employee m ON m.id = e.manager_id JOIN role ON e.role_id = role.id JOIN department ON department.id = role.department_id";
+    connection.query(query, 
+        (err, results) => {
+            if (err) throw err;
+            let managers = [];
+            for (let index = 0; index < results.length; index++) {
+                managers.push(results[index].manager)
+            }
+            inquirer.prompt({
+                type: 'rawlist',
+                name: 'action',
+                message: "Please choose a manager?",
+                choices: managers
+            }).then(answer => {
+                const query = `SELECT 
+                    CONCAT(e.first_name, ' ', e.last_name) AS Employee,
+                    CONCAT(m.first_name, ' ', m.last_name) AS Manager
+                FROM
+                    employee e
+                        LEFT JOIN
+                            employee m ON m.id = e.manager_id
+                            Where CONCAT(m.first_name, ' ', m.last_name) = ?`;
+                connection.query(query, [answer.action], (err, response) => {
+                     if (err) throw err;
+                     console.table(response);
+                     ask();
+                 })
+            })
+
+        });
+
+}
 
 //View all Roles
 const allRoleQuery = () => {
@@ -138,7 +173,6 @@ const allRoleQuery = () => {
             ask()
         }
     )
-
 }
 
 
