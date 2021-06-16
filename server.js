@@ -28,8 +28,8 @@ console.log(
 
 const whatToDo = [
     {
-        type: 'list',
-        name: 'whatToDo',
+        type: 'rawlist',
+        name: 'action',
         message: "What would you like to do?",
         choices: ['View All Employees', 'View All Employees by Department', 'View All Employees by Manager', 'Add Employee', 'Remove Employee', 'Update Employee Role', 'Update Employee Manager', 'View all Roles', 'I\'m done'],
     }
@@ -37,35 +37,41 @@ const whatToDo = [
 
 const start = () => {
     inquirer.prompt(whatToDo).then(answer => {
-    if (answer.whatToDo === 'View All Employees') {
-        allEmployeeQuery(); 
-    } else if (answer.whatToDo === 'View All Employees by Department') {
-    console.log('View All Employees by Department')
-        ask();
-    }  else if (answer.whatToDo === 'View All Employees by Manager') {
-    console.log('View All Employees by Manager:')
-    ask();
-    } else if (answer.whatToDo === 'Add Employee') {
-    console.log('Add Employee:')
-    ask();
-    } else if (answer.whatToDo === 'Remove Employee') {
-    console.log('Remove Employee:')
-    ask();
-    } else if (answer.whatToDo === 'Update Employee Role') {
-    console.log('Update Employee Role:')
-    ask();
-    } else if (answer.whatToDo === 'Update Employee Manager') {
-    console.log('Update Employee Manager:')
-    ask();
-    } else if (answer.whatToDo === 'View all Roles') {
-        allRoleQuery();
-    console.log('View all Roles:')
-    }
-})
+        switch (answer.action) {
+            case 'View All Employees':
+                allEmployeeQuery();
+                break;
+            case 'View All Employees by Department':
+                allEmpByDept();
+                break;
+            case 'View All Employees by Manager':
+                console.log('View All Employees by Manager:')
+                break;
+            case 'Add Employee':
+                console.log('Add Employee:')
+                break;
+            case 'Remove Employee':
+                console.log('Remove Employee:')
+                break;
+            case 'Update Employee Role':
+                console.log('Update Employee Role:')
+                break;
+            case 'Update Employee Manager':
+                console.log('Update Employee Manager:')
+                break;
+            case 'View all Roles':
+                allRoleQuery();
+                console.log('View all Roles:')
+                break;
+            default:
+                console.log(`Invalid action: ${answer.action}`);
+                break;
+        }
+    })
 }
 
 
-
+//View all employees
 const allEmployeeQuery = () => {
     connection.query(
         `SELECT 
@@ -91,6 +97,35 @@ const allEmployeeQuery = () => {
     )
 }
 
+//View employees by department
+const allEmpByDept = () => {
+    const query = 'SELECT name FROM department';
+    connection.query(query, 
+        (err, results) => {
+            if (err) throw err;
+            let departments = [];
+            for (let index = 0; index < results.length; index++) {
+                departments.push(results[index].name)
+            }
+            inquirer.prompt({
+                type: 'rawlist',
+                name: 'action',
+                message: "Which department would you like to see?",
+                choices: departments
+            }).then(answer => {
+                const query = "SELECT CONCAT(employee.first_name, ' ', employee.last_name) AS Employee, department.name AS Department FROM employee JOIN role ON role.id = employee.role_id JOIN department ON department.id = role.department_id where ?";
+                connection.query(query, {'department.name': answer.action}, (err, response) => {
+                    if (err) throw err;
+                    console.table(response);
+                    ask();
+                })
+            })
+
+        });
+}
+
+
+//View all Roles
 const allRoleQuery = () => {
     connection.query(
         `SELECT 
