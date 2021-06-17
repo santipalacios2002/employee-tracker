@@ -82,15 +82,12 @@ const start = () => {
                 updateEmpRole();
                 break;
             case 'Update Employee Manager':
-                console.log('Update Employee Manager:')
+                updateEmpMgr();
                 break;
             case 'View all Roles':
                 allRoleQuery();
-                console.log('View all Roles:')
                 break;
             default:
-                console.log(`Invalid action: ${answer.action}`);
-                ask();
                 break;
         }
     })
@@ -368,15 +365,77 @@ const updateEmpRole = () => {
                         })
                 })
             })
-
-            // ask();
         });
-
-    // const query = "UPDATE employee SET role_id = 8 where first_name = 'Santi' and last_name = 'Palacios'`;
-
-
-    //
 }
+
+const updateEmpMgr = () => {
+    const query = "SELECT CONCAT(first_name, ' ', last_name) AS Employee FROM employee";
+    connection.query(query,
+        (err, results) => {
+            if (err) throw err;
+            let employees = [];
+            for (let index = 0; index < results.length; index++) {
+                employees.push(results[index].Employee)
+            }
+            inquirer.prompt({
+                type: 'rawlist',
+                name: 'employee',
+                message: "Which Employee would you like update his/her manager?",
+                choices: employees
+            }).then(chosenEmployee => {
+                console.log(`we have ${chosenEmployee.employee}`)
+                const query = "SELECT DISTINCT( CONCAT(m.first_name, ' ', m.last_name) ) AS manager FROM employee e JOIN employee m ON m.id = e.manager_id JOIN role ON e.role_id = role.id JOIN department ON department.id = role.department_id";
+                connection.query(query, (err, response) => {
+                    if (err) throw err;
+                    let managers = [];
+                    for (let index = 0; index < response.length; index++) {
+                        managers.push(response[index].manager)
+                    }
+                    managers.push('None')
+                    inquirer.prompt(
+                        {
+                            name: 'manager',
+                            type: 'list',
+                            message: `What would you like ${chosenEmployee.employee}'s new manager be?`,
+                            choices: managers,
+                        }).then(answer => {
+                            const mgrNum = () => {  //this is good candidate for CLASSES
+                                switch (managers.manager) {
+                                    case 'Ashley Rodriguez':
+                                        return 1
+                                    case 'John Doe':
+                                        return 2
+                                    case 'Sarah Lourd':
+                                        return 6
+                                    case 'None':
+                                        return null
+                                }
+                            }
+                            const mgrId = mgrNum()
+                            const splitEmp = chosenEmployee.employee.split(' ');
+                            connection.query(
+                                'UPDATE employee SET ? where ? and ?',
+                                [
+                                    {
+                                        manager_id: mgrId
+                                    },
+                                    {
+                                        first_name: splitEmp[0],
+                                    },
+                                    {
+                                        last_name: splitEmp[1],
+                                    },
+                                ],
+                                (err) => {
+                                    if (err) throw err;
+                                    console.log(`${chosenEmployee.employee}'s manager updated successfully`);
+                                    ask();
+                                })
+                        })
+                })
+            })
+        });
+}  
 
 
 const ask = () => {
