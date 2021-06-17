@@ -76,7 +76,7 @@ const start = () => {
                 addEmployee();
                 break;
             case 'Remove Employee':
-                console.log('Remove Employee:')
+                removeEmployee();
                 break;
             case 'Update Employee Role':
                 console.log('Update Employee Role:')
@@ -200,7 +200,7 @@ const allRoleQuery = () => {
     )
 }
 
-
+// Add Employee
 const addEmployee = () => {
     inquirer.prompt(employeeQuestions).then(({ firstName, lastName, role, manager }) => {
         const roleNum = () => {  //this is good candidate for CLASSES
@@ -253,6 +253,46 @@ const addEmployee = () => {
     })
 }
 
+
+//Remove Employee
+const removeEmployee = () => {
+
+    const query = "SELECT CONCAT(first_name, ' ', last_name) AS Employee FROM employee";
+    connection.query(query,
+        (err, results) => {
+            console.log('results:', results)
+
+            if (err) throw err;
+            let employees = [];
+            for (let index = 0; index < results.length; index++) {
+                employees.push(results[index].Employee)
+            }
+            inquirer.prompt({
+                type: 'rawlist',
+                name: 'employee',
+                message: "Which Employee would you like to remove?",
+                choices: employees
+            }).then(answer => {
+                const removeEmpQuery = "DELETE FROM employee WHERE ? AND ?";
+                const splitName = answer.employee.split(' ')
+                console.log('splitName:', splitName)
+                connection.query(removeEmpQuery,
+                    [
+                        {
+                            first_name: splitName[0],
+                        },
+                        {
+                            last_name: splitName[1],
+                        },
+                    ],
+                    (err) => {
+                        if (err) throw err;
+                        console.log('Employee removed successfully');
+                        ask();
+                    })
+            })
+        })
+}
 
 
 const ask = () => {
