@@ -35,6 +35,31 @@ const whatToDo = [
     }
 ];
 
+const employeeQuestions = [
+    {
+        name: 'firstName',
+        type: 'input',
+        message: 'What is the employee\'s first name?',
+    },
+    {
+        name: 'lastName',
+        type: 'input',
+        message: 'What is the employee\'s last name?',
+    },
+    {
+        name: 'role',
+        type: 'list',
+        message: "What is the employee's?",
+        choices: ['Sales Lead', 'Sales Person', 'Lead Engineer', 'Accountant', 'Accountant Manager', 'Legal Team Lead', 'Lawyer', 'Software Engineer'],
+    },
+    {
+        name: 'manager',
+        type: 'list',
+        message: "Who is de employee's manager",
+        choices: ['Ashley Rodriguez', 'John Doe', 'Sarah Lourd', 'None'],
+    }
+]
+
 const start = () => {
     inquirer.prompt(whatToDo).then(answer => {
         switch (answer.action) {
@@ -48,7 +73,7 @@ const start = () => {
                 allEmpByMgr();
                 break;
             case 'Add Employee':
-                console.log('Add Employee:')
+                addEmployee();
                 break;
             case 'Remove Employee':
                 console.log('Remove Employee:')
@@ -100,7 +125,7 @@ const allEmployeeQuery = () => {
 //View employees by department
 const allEmpByDept = () => {
     const query = 'SELECT name FROM department';
-    connection.query(query, 
+    connection.query(query,
         (err, results) => {
             if (err) throw err;
             let departments = [];
@@ -114,7 +139,7 @@ const allEmpByDept = () => {
                 choices: departments
             }).then(answer => {
                 const query = "SELECT CONCAT(employee.first_name, ' ', employee.last_name) AS Employee, department.name AS Department FROM employee JOIN role ON role.id = employee.role_id JOIN department ON department.id = role.department_id where ?";
-                connection.query(query, {'department.name': answer.action}, (err, response) => {
+                connection.query(query, { 'department.name': answer.action }, (err, response) => {
                     if (err) throw err;
                     console.table(response);
                     ask();
@@ -128,7 +153,7 @@ const allEmpByDept = () => {
 const allEmpByMgr = () => {
     //
     const query = "SELECT DISTINCT( CONCAT(m.first_name, ' ', m.last_name) ) AS manager FROM employee e JOIN employee m ON m.id = e.manager_id JOIN role ON e.role_id = role.id JOIN department ON department.id = role.department_id";
-    connection.query(query, 
+    connection.query(query,
         (err, results) => {
             if (err) throw err;
             let managers = [];
@@ -150,10 +175,10 @@ const allEmpByMgr = () => {
                             employee m ON m.id = e.manager_id
                             Where CONCAT(m.first_name, ' ', m.last_name) = ?`;
                 connection.query(query, [answer.action], (err, response) => {
-                     if (err) throw err;
-                     console.table(response);
-                     ask();
-                 })
+                    if (err) throw err;
+                    console.table(response);
+                    ask();
+                })
             })
 
         });
@@ -175,6 +200,58 @@ const allRoleQuery = () => {
     )
 }
 
+
+const addEmployee = () => {
+    inquirer.prompt(employeeQuestions).then(({ firstName, lastName, role, manager }) => {
+        const roleNum = () => {  //this is good candidate for CLASSES
+            switch (role) {
+                case 'Sales Lead':
+                    return 1
+                case 'Sales Person':
+                    return 2
+                case 'Lead Engineer':
+                    return 3
+                case 'Accountant':
+                    return 4
+                case 'Accountant Manager':
+                    return 5
+                case 'Legal Team Lead':
+                    return 6
+                case 'Lawyer':
+                    return 7
+                case 'Software Engineer':
+                    return 8
+            }
+        }
+        const mgrNum = () => {  //this is good candidate for CLASSES
+            switch (manager) {
+                case 'Ashley Rodriguez':
+                    return 1
+                case 'John Doe':
+                    return 2
+                case 'Sarah Lourd':
+                    return 6
+                case 'None':
+                    return null
+            }
+        }
+        const roleId = roleNum()   //ASK IN CLASS
+        const mgrId = mgrNum()     //ASK IN CLASS
+        const queryInsertRole = 'INSERT INTO employee SET ?'
+        connection.query(queryInsertRole,
+            {
+                first_name: firstName,
+                last_name: lastName,
+                role_id: roleId,
+                manager_id: mgrId
+            },
+            (err) => {
+                if (err) throw err;
+                console.log('Employee added successfully');
+                ask();
+            })
+    })
+}
 
 
 
