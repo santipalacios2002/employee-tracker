@@ -79,7 +79,7 @@ const start = () => {
                 removeEmployee();
                 break;
             case 'Update Employee Role':
-                console.log('Update Employee Role:')
+                updateEmpRole();
                 break;
             case 'Update Employee Manager':
                 console.log('Update Employee Manager:')
@@ -90,6 +90,7 @@ const start = () => {
                 break;
             default:
                 console.log(`Invalid action: ${answer.action}`);
+                ask();
                 break;
         }
     })
@@ -113,7 +114,8 @@ const allEmployeeQuery = () => {
                 JOIN
             role ON e.role_id = role.id
                 JOIN
-            department ON department.id = role.department_id`,
+            department ON department.id = role.department_id
+            ORDER BY e.id`,
         (err, results) => {
             if (err) throw err;
             console.table(results);
@@ -151,7 +153,6 @@ const allEmpByDept = () => {
 
 //View employees by manager
 const allEmpByMgr = () => {
-    //
     const query = "SELECT DISTINCT( CONCAT(m.first_name, ' ', m.last_name) ) AS manager FROM employee e JOIN employee m ON m.id = e.manager_id JOIN role ON e.role_id = role.id JOIN department ON department.id = role.department_id";
     connection.query(query,
         (err, results) => {
@@ -253,15 +254,12 @@ const addEmployee = () => {
     })
 }
 
-
 //Remove Employee
 const removeEmployee = () => {
 
     const query = "SELECT CONCAT(first_name, ' ', last_name) AS Employee FROM employee";
     connection.query(query,
         (err, results) => {
-            console.log('results:', results)
-
             if (err) throw err;
             let employees = [];
             for (let index = 0; index < results.length; index++) {
@@ -275,7 +273,6 @@ const removeEmployee = () => {
             }).then(answer => {
                 const removeEmpQuery = "DELETE FROM employee WHERE ? AND ?";
                 const splitName = answer.employee.split(' ')
-                console.log('splitName:', splitName)
                 connection.query(removeEmpQuery,
                     [
                         {
@@ -292,6 +289,93 @@ const removeEmployee = () => {
                     })
             })
         })
+}
+
+//Update Employee role
+const updateEmpRole = () => {
+    const query = "SELECT CONCAT(first_name, ' ', last_name) AS Employee FROM employee";
+    connection.query(query,
+        (err, results) => {
+            if (err) throw err;
+            let employees = [];
+            for (let index = 0; index < results.length; index++) {
+                employees.push(results[index].Employee)
+            }
+            inquirer.prompt({
+                type: 'rawlist',
+                name: 'employee',
+                message: "Which Employee would you like update his/her role?",
+                choices: employees
+            }).then(chosenEmployee => {
+                console.log(`we have ${chosenEmployee.employee}`)
+                const query = 'SELECT title as role FROM role;'
+                connection.query(query, (err, response) => {
+                    if (err) throw err;
+                    let roles = [];
+                    for (let index = 0; index < response.length; index++) {
+                        roles.push(response[index].role)
+                    }
+                    inquirer.prompt(
+                        {
+                            name: 'role',
+                            type: 'list',
+                            message: `What would you like ${chosenEmployee.employee}'s new role be?`,
+                            choices: ['Sales Lead', 'Sales Person', 'Lead Engineer', 'Accountant', 'Accountant Manager', 'Legal Team Lead', 'Lawyer', 'Software Engineer'],
+                        }).then(answer => {
+                            console.log(`NOWWWW we have ${chosenEmployee.employee} and ${answer.role} `)
+                            const roleNum = () => {  //this is good candidate for CLASSES
+                                switch (answer.role) {
+                                    case 'Sales Lead':
+                                        return 1
+                                    case 'Sales Person':
+                                        return 2
+                                    case 'Lead Engineer':
+                                        return 3
+                                    case 'Accountant':
+                                        return 4
+                                    case 'Accountant Manager':
+                                        return 5
+                                    case 'Legal Team Lead':
+                                        return 6
+                                    case 'Lawyer':
+                                        return 7
+                                    case 'Software Engineer':
+                                        return 8
+                                }
+                            }
+                            const roleId = roleNum()   //ASK IN CLASS
+                            console.log(`NOWWWW we have ${chosenEmployee.employee} and ${answer.role} which is equal to ${roleId}`)
+                            const splitEmp = chosenEmployee.employee.split(' ');
+                            console.log(`NOWWWW we have ${chosenEmployee.employee} and ${answer.role} which is equal to ${roleId} and now it is split by their name: ${splitEmp[0]} and lastname: ${splitEmp[1]}`)
+                            connection.query(
+                                'UPDATE employee SET ? WHERE ? AND ?',
+                                [
+                                    {
+                                        role_id: roleId
+                                    },
+                                    {
+                                        first_name: splitEmp[0],
+                                    },
+                                    {
+                                        last_name: splitEmp[1],
+                                    },
+                                ],
+                                (err) => {
+                                    if (err) throw err;
+                                    console.log(`${chosenEmployee.employee}'s role updated successfully`);
+                                    ask();
+                                })
+                        })
+                })
+            })
+
+            // ask();
+        });
+
+    // const query = "UPDATE employee SET role_id = 8 where first_name = 'Santi' and last_name = 'Palacios'`;
+
+
+    //
 }
 
 
