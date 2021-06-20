@@ -24,6 +24,8 @@ console.log(
 
     " -----------------------------------------------------------------------------------------------------"
 
+
+
 )
 
 const whatToDo = [
@@ -49,13 +51,13 @@ const employeeQuestions = [
     {
         name: 'role',
         type: 'list',
-        message: "What is the employee's?",
+        message: "What is the employee's role?",
         choices: ['Sales Lead', 'Sales Person', 'Lead Engineer', 'Accountant', 'Accountant Manager', 'Legal Team Lead', 'Lawyer', 'Software Engineer'],
     },
     {
         name: 'manager',
         type: 'list',
-        message: "Who is de employee's manager",
+        message: "Who is the employee's manager",
         choices: ['Ashley Rodriguez', 'John Doe', 'Sarah Lourd', 'None'],
     }
 ]
@@ -88,6 +90,7 @@ const start = () => {
                 allRoleQuery();
                 break;
             default:
+                connection.end();
                 break;
         }
     })
@@ -183,72 +186,80 @@ const allEmpByMgr = () => {
 
 }
 
-//View all Roles
-const allRoleQuery = () => {
-    connection.query(
-        `SELECT 
-            role.id, title AS role
-         FROM
-            role`,
-        (err, results) => {
-            if (err) throw err;
-            console.table(results);
-            ask()
-        }
-    )
-}
 
 // Add Employee
 const addEmployee = () => {
-    inquirer.prompt(employeeQuestions).then(({ firstName, lastName, role, manager }) => {
-        const roleNum = () => {  //this is good candidate for CLASSES
-            switch (role) {
-                case 'Sales Lead':
-                    return 1
-                case 'Sales Person':
-                    return 2
-                case 'Lead Engineer':
-                    return 3
-                case 'Accountant':
-                    return 4
-                case 'Accountant Manager':
-                    return 5
-                case 'Legal Team Lead':
-                    return 6
-                case 'Lawyer':
-                    return 7
-                case 'Software Engineer':
-                    return 8
+    const query = 'SELECT id, title AS Role FROM role;';
+    connection.query(query,
+        (err, roleResults) => {
+            if (err) throw err;
+            let roles = [];
+            for (let index = 0; index < roleResults.length; index++) {
+                roles.push(roleResults[index].Role)
             }
-        }
-        const mgrNum = () => {  //this is good candidate for CLASSES
-            switch (manager) {
-                case 'Ashley Rodriguez':
-                    return 1
-                case 'John Doe':
-                    return 2
-                case 'Sarah Lourd':
-                    return 6
-                case 'None':
-                    return null
-            }
-        }
-        const roleId = roleNum()   //ASK IN CLASS
-        const mgrId = mgrNum()     //ASK IN CLASS
-        const queryInsertRole = 'INSERT INTO employee SET ?'
-        connection.query(queryInsertRole,
-            {
-                first_name: firstName,
-                last_name: lastName,
-                role_id: roleId,
-                manager_id: mgrId
-            },
-            (err) => {
-                if (err) throw err;
-                console.log('Employee added successfully');
-                ask();
-            })
-    })
+            connection.query("SELECT id, CONCAT(first_name, ' ', last_name) AS Manager FROM employee",
+                (err, mgrResults) => {
+                    if (err) throw err;
+                    let managers = [];
+                    for (let index = 0; index < mgrResults.length; index++) {
+                        managers.push(mgrResults[index].Manager)
+                    }
+                    managers.push('None')
+                    inquirer.prompt([
+                        {
+                            name: 'firstName',
+                            type: 'input',
+                            message: 'What is the employee\'s first name?',
+                        },
+                        {
+                            name: 'lastName',
+                            type: 'input',
+                            message: 'What is the employee\'s last name?',
+                        },
+                        {
+                            name: 'role',
+                            type: 'list',
+                            message: "What is the employee's role?",
+                            choices: roles,
+                        },
+                        {
+                            name: 'manager',
+                            type: 'list',
+                            message: "Who is the employee's manager",
+                            choices: managers,
+                        }
+                    ]).then(({ firstName, lastName, role, manager }) => {
+                        const chosenId = () => {
+                            for (let index = 0; index < roleResults.length; index++) {
+                               if (roleResults[index].Role === role ) {
+                                return roleResults[index].id
+                               }   
+                            }
+                        }
+                        const chosenManger = () => {
+                            for (let index = 0; index < mgrResults.length; index++) {
+                               if (mgrResults[index].Manager === manager ) {
+                                return mgrResults[index].id
+                               }   
+                            }
+                        }
+                        const queryInsertRole = 'INSERT INTO employee SET ?'
+                        connection.query(queryInsertRole,
+                            {
+                                first_name: firstName,
+                                last_name: lastName,
+                                role_id: chosenId(),
+                                manager_id: chosenManger()
+                            },
+                            (err) => {
+                                if (err) throw err;
+                                console.log('Employee added successfully');
+                                ask();
+                            })
+                    })
+                })
+
+        })
 }
 
 //Remove Employee
@@ -340,15 +351,13 @@ const updateEmpRole = () => {
                                         return 8
                                 }
                             }
-                            const roleId = roleNum()   //ASK IN CLASS
-                            console.log(`NOWWWW we have ${chosenEmployee.employee} and ${answer.role} which is equal to ${roleId}`)
+                            console.log(roleNum())
                             const splitEmp = chosenEmployee.employee.split(' ');
-                            console.log(`NOWWWW we have ${chosenEmployee.employee} and ${answer.role} which is equal to ${roleId} and now it is split by their name: ${splitEmp[0]} and lastname: ${splitEmp[1]}`)
                             connection.query(
                                 'UPDATE employee SET ? WHERE ? AND ?',
                                 [
                                     {
-                                        role_id: roleId
+                                        role_id: roleNum(),
                                     },
                                     {
                                         first_name: splitEmp[0],
@@ -368,8 +377,9 @@ const updateEmpRole = () => {
         });
 }
 
+//Update Employee Manager
 const updateEmpMgr = () => {
-    const query = "SELECT CONCAT(first_name, ' ', last_name) AS Employee FROM employee";
+    const query = "SELECT id, CONCAT(first_name, ' ', last_name) AS Employee FROM employee";
     connection.query(query,
         (err, results) => {
             if (err) throw err;
@@ -380,63 +390,102 @@ const updateEmpMgr = () => {
             inquirer.prompt({
                 type: 'rawlist',
                 name: 'employee',
-                message: "Which Employee would you like update his/her manager?",
+                message: "Which Employee would you like to update his/her manager?",
                 choices: employees
             }).then(chosenEmployee => {
                 console.log(`we have ${chosenEmployee.employee}`)
-                const query = "SELECT DISTINCT( CONCAT(m.first_name, ' ', m.last_name) ) AS manager FROM employee e JOIN employee m ON m.id = e.manager_id JOIN role ON e.role_id = role.id JOIN department ON department.id = role.department_id";
-                connection.query(query, (err, response) => {
-                    if (err) throw err;
-                    let managers = [];
-                    for (let index = 0; index < response.length; index++) {
-                        managers.push(response[index].manager)
-                    }
-                    managers.push('None')
-                    inquirer.prompt(
-                        {
-                            name: 'manager',
-                            type: 'list',
-                            message: `What would you like ${chosenEmployee.employee}'s new manager be?`,
-                            choices: managers,
-                        }).then(answer => {
-                            const mgrNum = () => {  //this is good candidate for CLASSES
-                                switch (managers.manager) {
-                                    case 'Ashley Rodriguez':
-                                        return 1
-                                    case 'John Doe':
-                                        return 2
-                                    case 'Sarah Lourd':
-                                        return 6
-                                    case 'None':
-                                        return null
-                                }
+                console.log(results)
+                let managers = employees;
+                managers.push('None')
+                inquirer.prompt(
+                    {
+                        name: 'manager',
+                        type: 'list',
+                        message: `What would you like ${chosenEmployee.employee}'s new manager be?`,
+                        choices: managers,
+                    }).then(manager => {
+                        console.log(results)
+                        for (let index = 0; index < results.length; index++) {
+                            if (manager.manager === results[index].Employee) {
+                                const mgrId = results[index].id
+                                const splitEmp = chosenEmployee.employee.split(' ');
+                                connection.query(
+                                    'UPDATE employee SET ? where ? and ?',
+                                    [
+                                        {
+                                            manager_id: mgrId,
+                                        },
+                                        {
+                                            first_name: splitEmp[0],
+                                        },
+                                        {
+                                            last_name: splitEmp[1],
+                                        },
+                                    ],
+                                    (err) => {
+                                        if (err) throw err;
+                                    })
+                            } else {
+                                const splitEmp = chosenEmployee.employee.split(' ');
+                                connection.query(
+                                    'UPDATE employee SET ? where ? and ?',
+                                    [
+                                        {
+                                            manager_id: null,
+                                        },
+                                        {
+                                            first_name: splitEmp[0],
+                                        },
+                                        {
+                                            last_name: splitEmp[1],
+                                        },
+                                    ],
+                                    (err) => {
+                                        if (err) throw err;
+                                    })
                             }
-                            const mgrId = mgrNum()
-                            const splitEmp = chosenEmployee.employee.split(' ');
-                            connection.query(
-                                'UPDATE employee SET ? where ? and ?',
-                                [
-                                    {
-                                        manager_id: mgrId
-                                    },
-                                    {
-                                        first_name: splitEmp[0],
-                                    },
-                                    {
-                                        last_name: splitEmp[1],
-                                    },
-                                ],
-                                (err) => {
-                                    if (err) throw err;
-                                    console.log(`${chosenEmployee.employee}'s manager updated successfully`);
-                                    ask();
-                                })
-                        })
-                })
+                        }
+                        ask();
+                    })
             })
         });
-}  
+}
 
+//View all Roles
+const allRoleQuery = () => {
+    connection.query(
+        `SELECT 
+            role.id, title AS role
+        FROM
+            role`,
+        (err, results) => {
+            if (err) throw err;
+            console.table(results);
+            ask()
+        }
+    )
+}
+
+// {
+//     name: "Add Role",
+//     value: "ADD_ROLE"
+//   },
+//   {
+//     name: "Remove Role",
+//     value: "REMOVE_ROLE"
+//   },
+//   {
+//     name: "View All Departments",
+//     value: "VIEW_DEPARTMENTS"
+//   },
+//   {
+//     name: "Add Department",
+//     value: "ADD_DEPARTMENT"
+//   },
+//   {
+//     name: "Remove Department",
+//     value: "REMOVE_DEPARTMENT"
+//   },
 
 const ask = () => {
     inquirer.prompt([{
