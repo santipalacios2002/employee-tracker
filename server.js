@@ -37,31 +37,6 @@ const whatToDo = [
     }
 ];
 
-const employeeQuestions = [
-    {
-        name: 'firstName',
-        type: 'input',
-        message: 'What is the employee\'s first name?',
-    },
-    {
-        name: 'lastName',
-        type: 'input',
-        message: 'What is the employee\'s last name?',
-    },
-    {
-        name: 'role',
-        type: 'list',
-        message: "What is the employee's role?",
-        choices: ['Sales Lead', 'Sales Person', 'Lead Engineer', 'Accountant', 'Accountant Manager', 'Legal Team Lead', 'Lawyer', 'Software Engineer'],
-    },
-    {
-        name: 'manager',
-        type: 'list',
-        message: "Who is the employee's manager",
-        choices: ['Ashley Rodriguez', 'John Doe', 'Sarah Lourd', 'None'],
-    }
-]
-
 const start = () => {
     inquirer.prompt(whatToDo).then(answer => {
         switch (answer.action) {
@@ -231,16 +206,16 @@ const addEmployee = () => {
                     ]).then(({ firstName, lastName, role, manager }) => {
                         const chosenId = () => {
                             for (let index = 0; index < roleResults.length; index++) {
-                               if (roleResults[index].Role === role ) {
-                                return roleResults[index].id
-                               }   
+                                if (roleResults[index].Role === role) {
+                                    return roleResults[index].id
+                                }
                             }
                         }
                         const chosenManger = () => {
                             for (let index = 0; index < mgrResults.length; index++) {
-                               if (mgrResults[index].Manager === manager ) {
-                                return mgrResults[index].id
-                               }   
+                                if (mgrResults[index].Manager === manager) {
+                                    return mgrResults[index].id
+                                }
                             }
                         }
                         const queryInsertRole = 'INSERT INTO employee SET ?'
@@ -315,64 +290,53 @@ const updateEmpRole = () => {
                 message: "Which Employee would you like update his/her role?",
                 choices: employees
             }).then(chosenEmployee => {
-                console.log(`we have ${chosenEmployee.employee}`)
-                const query = 'SELECT title as role FROM role;'
-                connection.query(query, (err, response) => {
-                    if (err) throw err;
-                    let roles = [];
-                    for (let index = 0; index < response.length; index++) {
-                        roles.push(response[index].role)
-                    }
-                    inquirer.prompt(
-                        {
-                            name: 'role',
-                            type: 'list',
-                            message: `What would you like ${chosenEmployee.employee}'s new role be?`,
-                            choices: ['Sales Lead', 'Sales Person', 'Lead Engineer', 'Accountant', 'Accountant Manager', 'Legal Team Lead', 'Lawyer', 'Software Engineer'],
-                        }).then(answer => {
-                            console.log(`NOWWWW we have ${chosenEmployee.employee} and ${answer.role} `)
-                            const roleNum = () => {  //this is good candidate for CLASSES
-                                switch (answer.role) {
-                                    case 'Sales Lead':
-                                        return 1
-                                    case 'Sales Person':
-                                        return 2
-                                    case 'Lead Engineer':
-                                        return 3
-                                    case 'Accountant':
-                                        return 4
-                                    case 'Accountant Manager':
-                                        return 5
-                                    case 'Legal Team Lead':
-                                        return 6
-                                    case 'Lawyer':
-                                        return 7
-                                    case 'Software Engineer':
-                                        return 8
+                const query = 'SELECT id, title as role FROM role;'
+                connection.query(query,
+                    (err, roleResponse) => {
+                        if (err) throw err;
+                        let roles = [];
+                        for (let index = 0; index < roleResponse.length; index++) {
+                            roles.push(roleResponse[index].role)
+                        }
+                        console.log('role!!!!!!!!!!!!!!!!!!!!!!!!', roleResponse)
+                        inquirer.prompt(
+                            {
+                                name: 'role',
+                                type: 'list',
+                                message: `What would you like ${chosenEmployee.employee}'s new role be?`,
+                                choices: roles,
+                            }).then(answer => {
+                                console.log('answer:!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!', answer)
+
+                                const roleNum = () => {  //this is good candidate for CLASSES
+                                    for (let index = 0; index < roleResponse.length; index++) {
+                                        if (roleResponse[index].role === answer.role) {
+                                            return roleResponse[index].id
+                                        }
+                                    }
                                 }
-                            }
-                            console.log(roleNum())
-                            const splitEmp = chosenEmployee.employee.split(' ');
-                            connection.query(
-                                'UPDATE employee SET ? WHERE ? AND ?',
-                                [
-                                    {
-                                        role_id: roleNum(),
-                                    },
-                                    {
-                                        first_name: splitEmp[0],
-                                    },
-                                    {
-                                        last_name: splitEmp[1],
-                                    },
-                                ],
-                                (err) => {
-                                    if (err) throw err;
-                                    console.log(`${chosenEmployee.employee}'s role updated successfully`);
-                                    ask();
-                                })
-                        })
-                })
+                                console.log(roleNum())
+                                const splitEmp = chosenEmployee.employee.split(' ');
+                                connection.query(
+                                    'UPDATE employee SET ? WHERE ? AND ?',
+                                    [
+                                        {
+                                            role_id: roleNum(),
+                                        },
+                                        {
+                                            first_name: splitEmp[0],
+                                        },
+                                        {
+                                            last_name: splitEmp[1],
+                                        },
+                                    ],
+                                    (err) => {
+                                        if (err) throw err;
+                                        console.log(`${chosenEmployee.employee}'s role updated successfully`);
+                                        ask();
+                                    })
+                            })
+                    })
             })
         });
 }
