@@ -33,7 +33,7 @@ const whatToDo = [
         type: 'rawlist',
         name: 'action',
         message: "What would you like to do?",
-        choices: ['View All Employees', 'View All Employees by Department', 'View All Employees by Manager', 'Add Employee', 'Remove Employee', 'Update Employee Role', 'Update Employee Manager', 'View all Roles', 'I\'m done'],
+        choices: ['View All Employees', 'View All Employees by Department', 'View All Employees by Manager', 'Add Employee', 'Remove Employee', 'Update Employee Role', 'Update Employee Manager', 'View all Roles', 'Add Role', 'I\'m done'],
     }
 ];
 
@@ -64,6 +64,8 @@ const start = () => {
             case 'View all Roles':
                 allRoleQuery();
                 break;
+            case 'Add Role':
+                addRole();
             default:
                 connection.end();
                 break;
@@ -298,7 +300,6 @@ const updateEmpRole = () => {
                         for (let index = 0; index < roleResponse.length; index++) {
                             roles.push(roleResponse[index].role)
                         }
-                        console.log('role!!!!!!!!!!!!!!!!!!!!!!!!', roleResponse)
                         inquirer.prompt(
                             {
                                 name: 'role',
@@ -306,8 +307,6 @@ const updateEmpRole = () => {
                                 message: `What would you like ${chosenEmployee.employee}'s new role be?`,
                                 choices: roles,
                             }).then(answer => {
-                                console.log('answer:!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!', answer)
-
                                 const roleNum = () => {  //this is good candidate for CLASSES
                                     for (let index = 0; index < roleResponse.length; index++) {
                                         if (roleResponse[index].role === answer.role) {
@@ -357,8 +356,6 @@ const updateEmpMgr = () => {
                 message: "Which Employee would you like to update his/her manager?",
                 choices: employees
             }).then(chosenEmployee => {
-                console.log(`we have ${chosenEmployee.employee}`)
-                console.log(results)
                 let managers = employees;
                 managers.push('None')
                 inquirer.prompt(
@@ -368,47 +365,32 @@ const updateEmpMgr = () => {
                         message: `What would you like ${chosenEmployee.employee}'s new manager be?`,
                         choices: managers,
                     }).then(manager => {
-                        console.log(results)
-                        for (let index = 0; index < results.length; index++) {
+                        let mgrId = null;
+                        let splitEmp = chosenEmployee.employee.split(' ');
+                        for (let index = 0; index < results.length; index++) {  // i need to change this loop for something more efficient
+
+                            console.log('manager.manager:', manager.manager)
+                            console.log('results[index].Employee:', results[index].Employee)
                             if (manager.manager === results[index].Employee) {
-                                const mgrId = results[index].id
-                                const splitEmp = chosenEmployee.employee.split(' ');
-                                connection.query(
-                                    'UPDATE employee SET ? where ? and ?',
-                                    [
-                                        {
-                                            manager_id: mgrId,
-                                        },
-                                        {
-                                            first_name: splitEmp[0],
-                                        },
-                                        {
-                                            last_name: splitEmp[1],
-                                        },
-                                    ],
-                                    (err) => {
-                                        if (err) throw err;
-                                    })
-                            } else {
-                                const splitEmp = chosenEmployee.employee.split(' ');
-                                connection.query(
-                                    'UPDATE employee SET ? where ? and ?',
-                                    [
-                                        {
-                                            manager_id: null,
-                                        },
-                                        {
-                                            first_name: splitEmp[0],
-                                        },
-                                        {
-                                            last_name: splitEmp[1],
-                                        },
-                                    ],
-                                    (err) => {
-                                        if (err) throw err;
-                                    })
+                                mgrId = results[index].id
                             }
                         }
+                        connection.query(
+                            'UPDATE employee SET ? where ? and ?',
+                            [
+                                {
+                                    manager_id: mgrId,
+                                },
+                                {
+                                    first_name: splitEmp[0],
+                                },
+                                {
+                                    last_name: splitEmp[1],
+                                },
+                            ],
+                            (err) => {
+                                if (err) throw err;
+                            })
                         ask();
                     })
             })
@@ -428,6 +410,63 @@ const allRoleQuery = () => {
             ask()
         }
     )
+}
+
+
+//Add new Role
+const addRole = () => {
+    connection.query('SELECT * FROM department;',
+        (err, deptResults) => {
+            if (err) throw err;
+            console.log(deptResults)
+            let departments = [];
+            for (let index = 0; index < deptResults.length; index++) {
+                departments.push(deptResults[index].name)
+            }
+            inquirer.prompt([{
+                type: 'input',
+                name: 'newRole',
+                message: 'Enter the name of the new Role'
+            },
+            {
+                type: 'input',
+                name: 'newRoleSalary',
+                message: 'Assign a salary to the new role'
+            },
+            {
+                type: 'rawlist',
+                name: 'newRoleDpt',
+                message: "Which department will this role belong to?",
+                choices: departments
+            }]).then(({ newRole, newRoleSalary, newRoleDpt }) => {
+
+                let dpt_id = 0;
+                for (let index = 0; index < deptResults.length; index++) {
+                    if (deptResults[index].name === newRoleDpt) {
+                        dpt_id = deptResults[index].id
+                    }
+                }
+                console.log('dpt_id:', dpt_id)
+                connection.query('INSERT INTO role SET ?',
+                    [
+                        {
+                            title: newRole,
+                        },
+                        {
+                            salary: newRoleSalary,
+                        },
+                        {
+                            department_id: dpt_id,
+                        },
+                    ],
+                    (err) => {
+                        if (err) throw err;
+                        console.log('Role added successfully');
+                    })
+                    
+                    // ask()
+            })
+        })
 }
 
 // {
