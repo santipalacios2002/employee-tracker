@@ -1,6 +1,7 @@
 const mysql = require('mysql')
 const inquirer = require('inquirer')
 const cTable = require('console.table');
+const Choices = require('inquirer/lib/objects/choices');
 
 //create connection
 const connection = mysql.createConnection({
@@ -33,7 +34,7 @@ const whatToDo = [
         type: 'rawlist',
         name: 'action',
         message: "What would you like to do?",
-        choices: ['View All Employees', 'View All Employees by Department', 'View All Employees by Manager', 'Add Employee', 'Remove Employee', 'Update Employee Role', 'Update Employee Manager', 'View all Roles', 'Add Role', 'I\'m done'],
+        choices: ['View All Employees', 'View All Employees by Department', 'View All Employees by Manager', 'Add Employee', 'Remove Employee', 'Remove Department', 'Update Employee Role', 'Update Employee Manager', 'View all Roles', 'View all Departments', 'Add Role', 'Add Department', 'I\'m done'],
     }
 ];
 
@@ -64,10 +65,19 @@ const start = () => {
             case 'View all Roles':
                 allRoleQuery();
                 break;
+            case 'View all Departments':
+                allDptQuery();
+                break;
             case 'Add Role':
                 addRole();
+                break;
+            case 'Add Department':
+                addDepartment();
+                break;
+            case 'Remove Department':
+                removeDepartment();
+                break;
             default:
-                connection.end();
                 break;
         }
     })
@@ -415,7 +425,8 @@ const allRoleQuery = () => {
 
 //Add new Role
 const addRole = () => {
-    connection.query('SELECT * FROM department;',
+    const query = 'SELECT * FROM department;';
+    connection.query(query,
         (err, deptResults) => {
             if (err) throw err;
             console.log(deptResults)
@@ -438,22 +449,24 @@ const addRole = () => {
                 name: 'newRoleDpt',
                 message: "Which department will this role belong to?",
                 choices: departments
-            }]).then(({ newRole, newRoleSalary, newRoleDpt }) => {
-
+            }]).then(answers => {
                 let dpt_id = 0;
-                for (let index = 0; index < deptResults.length; index++) {
-                    if (deptResults[index].name === newRoleDpt) {
-                        dpt_id = deptResults[index].id
+                for (let index = 0; index < deptResults.length; index++) {  // i need to change this loop for something more efficient
+                    if (answers.newRoleDpt === deptResults[index].name) {
+                        dpt_id = deptResults[index].id;
                     }
                 }
-                console.log('dpt_id:', dpt_id)
-                connection.query('INSERT INTO role SET ?',
+                console.log(dpt_id)
+                console.log('answers.newRole:', answers.newRole)
+                console.log('answers.newRoleSalary:', answers.newRoleSalary)
+                connection.query(
+                    'INSERT INTO role SET ?',
                     [
                         {
-                            title: newRole,
+                            title: answers.newRole,
                         },
                         {
-                            salary: newRoleSalary,
+                            salary: answers.newRoleSalary,
                         },
                         {
                             department_id: dpt_id,
@@ -461,29 +474,84 @@ const addRole = () => {
                     ],
                     (err) => {
                         if (err) throw err;
-                        console.log('Role added successfully');
+                        ask();
                     })
-                    
-                    // ask()
             })
         })
 }
 
-// {
-//     name: "Add Role",
-//     value: "ADD_ROLE"
-//   },
+//View All Departments
+const allDptQuery = () => {
+    connection.query(
+        `SELECT 
+            id, name AS Department
+        FROM
+            department`,
+        (err, results) => {
+            if (err) throw err;
+            console.table(results);
+            ask()
+        }
+    )
+}
+
+//Add Department
+const addDepartment = () => {
+    inquirer.prompt(
+        {
+            type: 'input',
+            name: 'newDepartment',
+            message: 'Enter the name of the new Department'
+        }).then(answer => {
+            const query = 'INSERT INTO department SET ?';
+            connection.query(query,
+                {
+                    name: answer.newDepartment,
+                },
+                (err) => {
+                    if (err) throw err;
+                    ask();
+                })
+        })
+}
+
+
+//remove Department
+
+const removeDepartment = () => {
+    const query = 'SELECT * FROM department'
+    connection.query(query,
+        (err, results) => {
+            if (err) throw err;
+            let departments = [];
+            for (let index = 0; index < results.length; index++) {  // i need to change this loop for something more efficient
+                departments.push(results[index].name)
+            }
+            inquirer.prompt(
+                {
+                    type: 'rawlist',
+                    name: 'remove',
+                    message: 'Which department would you like to remove?',
+                    choices: departments
+                }).then(answer => {
+                    const query = 'DELETE FROM department WHERE ?;'
+                    connection.query(query,
+                        {
+                            name: answer.remove,
+                        },
+                        (err) => {
+                            if (err) throw err;
+                            ask();
+                        })
+                })
+        }
+    )
+}
+
+
 //   {
 //     name: "Remove Role",
 //     value: "REMOVE_ROLE"
-//   },
-//   {
-//     name: "View All Departments",
-//     value: "VIEW_DEPARTMENTS"
-//   },
-//   {
-//     name: "Add Department",
-//     value: "ADD_DEPARTMENT"
 //   },
 //   {
 //     name: "Remove Department",
@@ -501,6 +569,8 @@ const ask = () => {
         else connection.end();
     });
 }
+
+
 
 
 start();
