@@ -34,7 +34,7 @@ const whatToDo = [
         type: 'rawlist',
         name: 'action',
         message: "What would you like to do?",
-        choices: ['View All Employees', 'View All Employees by Department', 'View All Employees by Manager', 'Add Employee', 'Remove Employee', 'Remove Department', 'Update Employee Role', 'Update Employee Manager', 'View all Roles', 'View all Departments', 'Add Role', 'Add Department', 'I\'m done'],
+        choices: ['View All Employees', 'View all Roles', 'View all Departments', 'View All Employees by Department', 'View All Employees by Manager', 'Add Employee', 'Add Role', 'Add Department', 'Update Employee Role', 'Update Employee Manager', 'Remove Employee', 'Remove Department', 'Remove Role'],
     }
 ];
 
@@ -76,6 +76,9 @@ const start = () => {
                 break;
             case 'Remove Department':
                 removeDepartment();
+                break;
+            case 'Remove Role':
+                removeRole();
                 break;
             default:
                 break;
@@ -324,7 +327,6 @@ const updateEmpRole = () => {
                                         }
                                     }
                                 }
-                                console.log(roleNum())
                                 const splitEmp = chosenEmployee.employee.split(' ');
                                 connection.query(
                                     'UPDATE employee SET ? WHERE ? AND ?',
@@ -377,10 +379,7 @@ const updateEmpMgr = () => {
                     }).then(manager => {
                         let mgrId = null;
                         let splitEmp = chosenEmployee.employee.split(' ');
-                        for (let index = 0; index < results.length; index++) {  // i need to change this loop for something more efficient
-
-                            console.log('manager.manager:', manager.manager)
-                            console.log('results[index].Employee:', results[index].Employee)
+                        for (let index = 0; index < results.length; index++) {
                             if (manager.manager === results[index].Employee) {
                                 mgrId = results[index].id
                             }
@@ -429,7 +428,6 @@ const addRole = () => {
     connection.query(query,
         (err, deptResults) => {
             if (err) throw err;
-            console.log(deptResults)
             let departments = [];
             for (let index = 0; index < deptResults.length; index++) {
                 departments.push(deptResults[index].name)
@@ -456,9 +454,6 @@ const addRole = () => {
                         dpt_id = deptResults[index].id;
                     }
                 }
-                console.log(dpt_id)
-                console.log('answers.newRole:', answers.newRole)
-                console.log('answers.newRoleSalary:', answers.newRoleSalary)
                 connection.query(
                     'INSERT INTO role SET ?',
                     [
@@ -548,15 +543,43 @@ const removeDepartment = () => {
     )
 }
 
+//remove Role
+const removeRole = () => {
+    const query = 'SELECT * FROM role'
+    connection.query(query,
+        (err, results) => {
+            if (err) throw err;
+            let roles = [];
+            for (let index = 0; index < results.length; index++) {  // i need to change this loop for something more efficient
+                roles.push(results[index].title)
+            }
+            inquirer.prompt(
+                {
+                    type: 'rawlist',
+                    name: 'remove',
+                    message: 'Which role would you like to remove?',
+                    choices: roles
+                }).then(answer => {
+                    const query = 'DELETE FROM role WHERE ?;'
+                    connection.query(query,
+                        {
+                            title: answer.remove,
+                        },
+                        (err) => {
+                            if (err) throw err;
+                            ask();
+                        })
+                })
+        }
+    )
+}
+
 
 //   {
 //     name: "Remove Role",
 //     value: "REMOVE_ROLE"
 //   },
 //   {
-//     name: "Remove Department",
-//     value: "REMOVE_DEPARTMENT"
-//   },
 
 const ask = () => {
     inquirer.prompt([{
