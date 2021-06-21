@@ -34,7 +34,7 @@ const whatToDo = [
         type: 'rawlist',
         name: 'action',
         message: "What would you like to do?",
-        choices: ['View All Employees', 'View all Roles', 'View all Departments', 'View All Employees by Department', 'View All Employees by Manager', 'Add Employee', 'Add Role', 'Add Department', 'Update Employee Role', 'Update Employee Manager', 'Remove Employee', 'Remove Department', 'Remove Role'],
+        choices: ['View All Employees', 'View all Roles', 'View all Departments', 'View All Employees by Department', 'View All Employees by Manager', 'View Budget by Department', 'Add Employee', 'Add Role', 'Add Department', 'Update Employee Role', 'Update Employee Manager', 'Remove Employee', 'Remove Department', 'Remove Role'],
     }
 ];
 
@@ -80,6 +80,9 @@ const start = () => {
             case 'Remove Role':
                 removeRole();
                 break;
+            case 'View Budget by Department':
+                salaryByDpt();
+                break;
             default:
                 break;
         }
@@ -95,7 +98,7 @@ const allEmployeeQuery = () => {
             CONCAT(e.first_name, ' ', e.last_name) AS Employee,
             role.title AS Title,
             department.name AS Department,
-            role.salary AS Salary,
+            LPAD(CONCAT('$ ', role.salary), 15, ' ') AS Salary,
             CONCAT(m.first_name, ' ', m.last_name) AS Manager
         FROM
             employee e
@@ -137,7 +140,6 @@ const allEmpByDept = () => {
                     ask();
                 })
             })
-
         });
 }
 
@@ -574,12 +576,40 @@ const removeRole = () => {
     )
 }
 
-
-//   {
-//     name: "Remove Role",
-//     value: "REMOVE_ROLE"
-//   },
-//   {
+//add budgets by department
+const salaryByDpt = () => {
+    const query = 'SELECT name FROM department';
+    connection.query(query,
+        (err, results) => {
+            if (err) throw err;
+            let departments = [];
+            for (let index = 0; index < results.length; index++) {
+                departments.push(results[index].name)
+            }
+            inquirer.prompt({
+                type: 'rawlist',
+                name: 'action',
+                message: "Which department's budget would you like to see?",
+                choices: departments
+            }).then(answer => {
+                const query = `SELECT 
+                                    department.name AS Department,
+                                    CONCAT('$ ', SUM(role.salary)) 'Budget Utilized'
+                                FROM
+                                    employee
+                                JOIN
+                                    role ON role_id = role.id
+                                JOIN
+                                    department ON department.id = role.department_id
+                                WHERE ?`
+                connection.query(query, { 'department.name': answer.action }, (err, response) => {
+                    if (err) throw err;
+                    console.table(response);
+                    ask();
+                })
+            })
+        });
+}
 
 const ask = () => {
     inquirer.prompt([{
